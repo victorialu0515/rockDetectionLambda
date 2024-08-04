@@ -6,7 +6,9 @@ RUN yum install -y mesa-libGL
 
 # Install requirements
 COPY docker/requirements.txt ${LAMBDA_TASK_ROOT}
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 # Copy stuff
 COPY models ${LAMBDA_TASK_ROOT}/models
