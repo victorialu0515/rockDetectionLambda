@@ -6,7 +6,7 @@ RUN yum install -y mesa-libGL
 
 # Install requirements
 COPY docker/requirements.txt ${LAMBDA_TASK_ROOT}
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN pip install --no-cache-dir -r requirements.txt --index-url https://download.pytorch.org/whl/cpu && \
     yum clean all && \
     rm -rf /var/cache/yum
 
