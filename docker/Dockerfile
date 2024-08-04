@@ -5,8 +5,10 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 RUN yum install -y mesa-libGL
 
 # Install requirements
-COPY docker/requirements.txt ${LAMBDA_TASK_ROOT}
-RUN pip install --no-cache-dir -r requirements.txt --index-url https://download.pytorch.org/whl/cpu && \
+COPY docker/requirements* ${LAMBDA_TASK_ROOT}
+RUN pip install --no-cache-dir -r requirements_basic.txt && \
+    pip install --no-cache-dir -r requirements_torch.txt --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements_yolo.txt && \
     yum clean all && \
     rm -rf /var/cache/yum
 
