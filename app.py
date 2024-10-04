@@ -73,8 +73,6 @@ def drawColour(image, result, output):
         cv2.rectangle(imageArray, (int(x-w/2), int(y-h/2)), (int(x+w/2), int(y+h/2)), (int(b), int(g), int(r)), 5)
         cv2.putText(imageArray, str(rectangle['id']), (int(x), int(y)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
         cv2.putText(imageArray, str(rectangle['track']), (int(x), int(y-h/2-10)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(int(b), int(g), int(r)), thickness=5)
-    cv2.imshow("image", imageArray)
-    cv2.waitKey(0)
 
     with TemporaryDirectory() as tmp_dir:
         os.chdir(tmp_dir)
