@@ -70,11 +70,24 @@ def drawColour(image, result, output):
     for i, rectangle in enumerate(result):
         x, y, w, h = rectangle['bbox']
         r, g, b = rectangle['colour']
-        cv2.rectangle(imageArray, (int(x-w/2), int(y-h/2)), (int(x+w/2), int(y+h/2)), (int(b), int(g), int(r)), 3)
-        cv2.putText(imageArray, str(rectangle['id']), (int(x), int(y)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=2)
-        cv2.putText(imageArray, str(rectangle['track']), (int(x)-10, int(y)-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0), thickness=2)
-    # cv2.imwrite(f"{output}.jpg", imageArray)
-    upload_file(f"{output}.jpg", "model1234", f"{datetime.now().strftime('%Y, %m, %d, %H, %M, %S')}.jpg")
+        cv2.rectangle(imageArray, (int(x-w/2), int(y-h/2)), (int(x+w/2), int(y+h/2)), (int(b), int(g), int(r)), 5)
+        cv2.putText(imageArray, str(rectangle['id']), (int(x), int(y)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
+        cv2.putText(imageArray, str(rectangle['track']), (int(x), int(y-h/2-10)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(int(b), int(g), int(r)), thickness=5)
+    cv2.imshow("image", imageArray)
+    cv2.waitKey(0)
+
+    with TemporaryDirectory() as tmp_dir:
+        os.chdir(tmp_dir)
+
+        tmp_image_path = 'rockDetection.jpg'
+        cv2.imwrite(tmp_image_path, imageArray)
+        with open(tmp_image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+
+        s3Key = f"rockdetection-{datetime.now().strftime('%Y, %m, %d, %H, %M, %S')}.jpg"
+        upload_file(tmp_image_path, "rockdetectionbucket", s3Key)
+
+        return encoded_string
 
 def upload_file(file_name, bucket, object_name=None):
     """Upload a file to an S3 bucket
@@ -121,8 +134,8 @@ def detection(image_path, numCluster, output_path, model_path="best.pt"):
     #     json.dump(result_dict, f, indent=4)
 
 
-    # drawColour(image_path, result_dict["rocks"], output_path)
-    return result_dict
+    imageString = drawColour(image_path, result_dict["rocks"], output_path)
+    return result_dict, imageString
 
 
 def lambda_handler(event, context):
@@ -146,59 +159,28 @@ def lambda_handler(event, context):
 
         Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
     """
-    querystring = event.get('queryStringParameters', event)
-    image_b64 = querystring.get("image")
-    model_path = querystring.get("model_path", "models/best.pt")
 
-    #
-    # os.system("rm -rf /tmp/*")
-    #
-    # with TemporaryDirectory() as tmp_dir:
-    #     os.chdir(tmp_dir)
-    #     print(os.path.exists('best.pt'))
-    #     print(f"Temporary directory: {tmp_dir}")
-    #
-    #     im_file = 'rocks.jpg'
-    #
-    #     try:
-    #         decoded = base64.b64decode(image_b64)
-    #
-    #         with open(im_file, "wb") as f:
-    #             f.write(decoded)
-    #
-    #     except Exception as e:
-    #         print("error:", e)
-    #
-    # s3 = boto3.client('s3')
-    # model_key = "best.pt"
-
-    # model_name = os.path.join(tmp_dir, "best.pt")
-    # try:
-    #     s3.download_file("model1234", model_key, model_path)
-    # except Exception as e:
-    #     print("Error:", e)
-    #     return
+    body = event
+    if event.get("httpMethod") == "POST":
+        body = json.loads(event.get("body"))
+    elif event.get("httpMethod") == "GET":
+        body = event.get('queryStringParameters', event)
+    image_b64 = body.get("image")
+    model_path = body.get("model_path", "models/best.pt")
 
     # TODO: in lambda the image path needs to be tmp folder
     image_path = '/tmp/decode.jpg'
     decodeString(image_b64, image_path)
-    results = detection(image_path, 6, "test", model_path)
+    results, imagestring = detection(image_path, 6, "test", model_path)
 
-
-    # try:
-    #     ip = requests.get("http://checkip.amazonaws.com/")
-    # except requests.RequestException as e:
-    #     # Send some context about this error to Lambda Logs
-    #     print(e)
-
-    #     raise e
 
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "result_json": results
+            "result_json": results,
+            "image_string": imagestring
             # "location": ip.text.replace("\n", "")
-        }),
+        })
     }
 
 if __name__ == "__main__":
@@ -209,6 +191,7 @@ if __name__ == "__main__":
         f.write(encoded_string)
 
     event = {
+        "httpMethod": "GET",
         "queryStringParameters":
             {
                 "image": encoded_string,
