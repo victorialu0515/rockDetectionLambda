@@ -82,8 +82,8 @@ def drawColour(image, result, output):
         with open(tmp_image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
 
-        s3Key = f"rockdetection-{datetime.now().strftime('%Y, %m, %d, %H, %M, %S')}.jpg"
-        upload_file(tmp_image_path, "rockdetectionbucket", s3Key)
+        # s3Key = f"rockdetection-{datetime.now().strftime('%Y, %m, %d, %H, %M, %S')}.jpg"
+        # upload_file(tmp_image_path, "rockdetectionbucket", s3Key)
 
         return encoded_string
 
