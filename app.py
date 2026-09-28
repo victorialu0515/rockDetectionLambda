@@ -165,6 +165,10 @@ def lambda_handler(event, context):
         body = event.get('queryStringParameters', event)
     image_b64 = body.get("image")
     model_path = body.get("model_path", "models/best.pt")
+    # drawColour() below os.chdir()s into a scratch tmp dir and never changes back, so on a warm container's
+    # next invocation a relative model_path no longer resolves against /var/task -- make it absolute up front.
+    if not os.path.isabs(model_path):
+        model_path = os.path.join(os.environ.get("LAMBDA_TASK_ROOT", "."), model_path)
 
     # TODO: in lambda the image path needs to be tmp folder
     image_path = '/tmp/decode.jpg'
